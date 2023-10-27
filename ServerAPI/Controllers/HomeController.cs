@@ -25,7 +25,7 @@ namespace ServerAPI.Controllers
         [Route("{count}")]
         public int[] GetNumbers(int count)
         {
-            Thread.Sleep(2000);
+            Thread.Sleep(5000);
             return new ServerLogic().GetNumbers(count, 1, 6);
         }
 

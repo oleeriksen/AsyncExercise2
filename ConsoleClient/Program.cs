@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -12,7 +13,7 @@ namespace ConsoleClient
         {
 
             HttpClient _client = new HttpClient();
-
+            List<Task> mTasks = new();
             int number = GetNumber("Enter a number (0 for stop): ");
             while (number != 0)
             {
@@ -20,15 +21,23 @@ namespace ConsoleClient
 
                 Task<HttpResponseMessage> response = _client.GetAsync("https://localhost:5003/numbers/" + number);
 
-                String result = (response.Result.Content.ReadAsStringAsync().Result);
-
-                WriteToFile("Result: " + result + " between " + start.ToLongTimeString() + " - " + DateTime.Now.ToLongTimeString());
-
+                Task t = new Task(() => {
+                    String result = (response.Result.Content.ReadAsStringAsync().Result);
+                    WriteToFile("Result: " + result + " between " + start.ToLongTimeString() + " - " + DateTime.Now.ToLongTimeString());
+                });
+                t.Start();
+                mTasks.Add(t);
                 
                 number = GetNumber("Enter a number (0 for stop): ");
             }
+            // vent på at alle er færdige
+            Console.WriteLine("We are closing...");
+            foreach (var t in mTasks) t.Wait();
+
             Console.WriteLine("Done...");
+            Console.ReadKey();
         }
+
 
         private static int GetNumber(String text)
         {
@@ -36,15 +45,21 @@ namespace ConsoleClient
             return int.Parse(Console.ReadLine());
         }
 
+        private static Object mLock = new object();
+
+
         private static void WriteToFile(string s)
         {
             string path = @"fromclient.txt";
 
-            StreamWriter sw = File.AppendText(path);
+            lock(mLock) {
 
-            sw.WriteLine(s);
+                StreamWriter sw = File.AppendText(path);
 
-            sw.Flush();
+                sw.WriteLine(s);
+
+                sw.Flush();
+            }
         }
     }
 }
